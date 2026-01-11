@@ -1,17 +1,16 @@
-const { existsSync, readFileSync, writeFileSync } = require("fs");
+const { existsSync, readFileSync, writeFileSync, unlinkSync } = require("fs");
 const { join } = require("path");
 
-// ---- input -------------------------------------------------
 if (!process.env.PRERELEASE || !process.env.VERSION) {
   console.error("PRERELEASE and VERSION env vars are required");
   process.exit(1);
 }
 
-const raw = process.env.VERSION;
+const raw = process.env.VERSION; // v0.0.1-test.release.build004
 const prerelease = process.env.PRERELEASE === "true";
 const ver = raw.startsWith("v") ? raw.slice(1) : raw;
 
-const core = ver.split(/[-+]/)[0]; // X.Y.Z
+const core = ver.split(/[-+]/)[0]; // 0.0.1
 if (!/^\d+\.\d+\.\d+$/.test(core)) {
   console.error(`Invalid VERSION core: ${raw}`);
   process.exit(1);
@@ -26,28 +25,26 @@ if (!prerelease && ver !== core) {
 }
 
 const baseDir = join(process.cwd(), "Casks");
-
-if (!existsSync(baseDir)) {
-  console.error(`base dir not found: ${baseDir}`);
+const tmplPath = join(baseDir, "sentrie.rb.tmpl");
+if (!existsSync(tmplPath)) {
+  console.error(`template not found: ${tmplPath}`);
   process.exit(1);
 }
 
-const srcPath = join(baseDir, "sentrie.rb");
-if (!existsSync(srcPath)) {
-  console.error(`source cask not found: ${srcPath}`);
-  process.exit(1);
-}
+const src = readFileSync(tmplPath, "utf8");
 
-const src = readFileSync(srcPath, "utf8");
+// Remove template so it never gets committed
+unlinkSync(tmplPath);
 
+// Always: publish the full version (prerelease or stable)
+makeVersioned({ src, version: ver });
+
+// Stable: publish default + major/minor channels
 if (!prerelease) {
-  // only create versioned casks if not a prerelease
-  makeVersioned({ src, version: mm }); // 1.2    -> sentrie@1_2.rb
-  makeVersioned({ src, version: major }); // 1   -> sentrie@1.rb
+  writeFileSync(join(baseDir, "sentrie.rb"), src, "utf8");
+  makeVersioned({ src, version: mm });
+  makeVersioned({ src, version: major });
 }
-
-// always create the versioned cask for the full version
-makeVersioned({ src, version: ver }); // 1.2.3 -> sentrie@1_2_3.rb
 
 function replaceFirst(haystack, needle, replacement) {
   const idx = haystack.indexOf(needle);
@@ -65,21 +62,23 @@ function makeVersioned({ src, version }) {
   const tokenSuffix = version
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, ""); // file + token uses underscores
-
-  const binSuffix = version; // binary keeps dots
+    .replace(/^_+|_+$/g, "");
 
   const dstPath = join(baseDir, `sentrie@${tokenSuffix}.rb`);
   let text = src;
 
-  const tokenNeedle = 'cask "sentrie" do';
-  const tokenReplacement = `cask "sentrie@${tokenSuffix}" do`;
-  const r1 = replaceFirst(text, tokenNeedle, tokenReplacement);
+  const r1 = replaceFirst(
+    text,
+    'cask "sentrie" do',
+    `cask "sentrie@${tokenSuffix}" do`
+  );
   text = r1.out;
 
-  const binNeedle = '  binary "sentrie"';
-  const binReplacement = `  binary "sentrie", target: "sentrie@${binSuffix}"`;
-  const r2 = replaceFirst(text, binNeedle, binReplacement);
+  const r2 = replaceFirst(
+    text,
+    '  binary "sentrie"',
+    `  binary "sentrie", target: "sentrie@${version}"`
+  );
   text = r2.out;
 
   if (!r1.changed || !r2.changed) {
@@ -88,5 +87,4 @@ function makeVersioned({ src, version }) {
   }
 
   writeFileSync(dstPath, text, "utf8");
-  console.log(`wrote ${dstPath}`);
 }
