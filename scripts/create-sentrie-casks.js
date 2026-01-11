@@ -1,7 +1,11 @@
 const { existsSync, readFileSync, writeFileSync, unlinkSync } = require("fs");
 const { join } = require("path");
 
-if (!process.env.PRERELEASE || !process.env.VERSION) {
+if (
+  !process.env.PRERELEASE ||
+  !process.env.VERSION ||
+  !process.env.TEMPLATE_NAME
+) {
   console.error("PRERELEASE and VERSION env vars are required");
   process.exit(1);
 }
@@ -25,7 +29,7 @@ if (!prerelease && ver !== core) {
 }
 
 const baseDir = join(process.cwd(), "Casks");
-const tmplPath = join(baseDir, "sentrie.rb.tmpl");
+const tmplPath = join(baseDir, process.env.TEMPLATE_NAME);
 if (!existsSync(tmplPath)) {
   console.error(`template not found: ${tmplPath}`);
   process.exit(1);
