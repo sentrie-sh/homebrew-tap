@@ -1,11 +1,7 @@
 const { existsSync, readFileSync, writeFileSync, unlinkSync } = require("fs");
 const { join } = require("path");
 
-if (
-  !process.env.PRERELEASE ||
-  !process.env.VERSION ||
-  !process.env.TEMPLATE_NAME
-) {
+if (!process.env.PRERELEASE || !process.env.VERSION) {
   console.error("PRERELEASE and VERSION env vars are required");
   process.exit(1);
 }
@@ -28,26 +24,53 @@ if (!prerelease && ver !== core) {
   process.exit(1);
 }
 
-const baseDir = join(process.cwd(), "Casks");
-const tmplPath = join(baseDir, process.env.TEMPLATE_NAME);
-if (!existsSync(tmplPath)) {
-  console.error(`template not found: ${tmplPath}`);
+// Process Cask template
+const caskBaseDir = join(process.cwd(), "Casks");
+const caskTmplPath = join(caskBaseDir, "sentrie.rb.tmpl");
+if (!existsSync(caskTmplPath)) {
+  console.error(`cask template not found: ${caskTmplPath}`);
   process.exit(1);
 }
 
-const src = readFileSync(tmplPath, "utf8");
+const caskSrc = readFileSync(caskTmplPath, "utf8");
 
 // Remove template so it never gets committed
-unlinkSync(tmplPath);
+unlinkSync(caskTmplPath);
 
 // Always: publish the full version (prerelease or stable)
-makeVersioned({ src, version: ver });
+makeVersionedCask({ src: caskSrc, version: ver });
 
 // Stable: publish default + major/minor channels
 if (!prerelease) {
-  writeFileSync(join(baseDir, "sentrie.rb"), src, "utf8");
-  makeVersioned({ src, version: mm });
-  makeVersioned({ src, version: major });
+  const defaultCaskContent = removeCommentLines(caskSrc);
+  writeFileSync(join(caskBaseDir, "sentrie.rb"), defaultCaskContent, "utf8");
+  makeVersionedCask({ src: caskSrc, version: mm });
+  makeVersionedCask({ src: caskSrc, version: major });
+}
+
+// Process Formula template
+const formulaBaseDir = join(process.cwd(), "Formula");
+const formulaTmplPath = join(formulaBaseDir, "sentrie.rb.tmpl");
+if (existsSync(formulaTmplPath)) {
+  const formulaSrc = readFileSync(formulaTmplPath, "utf8");
+
+  // Remove template so it never gets committed
+  unlinkSync(formulaTmplPath);
+
+  // Always: publish the full version (prerelease or stable)
+  makeVersionedFormula({ src: formulaSrc, version: ver });
+
+  // Stable: publish default + major/minor channels
+  if (!prerelease) {
+    const defaultFormulaContent = removeCommentLines(formulaSrc);
+    writeFileSync(
+      join(formulaBaseDir, "sentrie.rb"),
+      defaultFormulaContent,
+      "utf8"
+    );
+    makeVersionedFormula({ src: formulaSrc, version: mm });
+    makeVersionedFormula({ src: formulaSrc, version: major });
+  }
 }
 
 function replaceFirst(haystack, needle, replacement) {
@@ -62,13 +85,24 @@ function replaceFirst(haystack, needle, replacement) {
   };
 }
 
-function makeVersioned({ src, version }) {
+function removeCommentLines(text) {
+  // Remove lines that are entirely comments (start with #, optionally with leading whitespace)
+  return text
+    .split("\n")
+    .filter((line) => {
+      const trimmed = line.trim();
+      return trimmed.length === 0 || !trimmed.startsWith("#");
+    })
+    .join("\n");
+}
+
+function makeVersionedCask({ src, version }) {
   const tokenSuffix = version
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
-  const dstPath = join(baseDir, `sentrie@${tokenSuffix}.rb`);
+  const dstPath = join(caskBaseDir, `sentrie@${tokenSuffix}.rb`);
   let text = src;
 
   const r1 = replaceFirst(
@@ -90,5 +124,43 @@ function makeVersioned({ src, version }) {
     process.exit(1);
   }
 
+  // Remove comment lines
+  text = removeCommentLines(text);
+
   writeFileSync(dstPath, text, "utf8");
+}
+
+function makeVersionedFormula({ src, version }) {
+  const tokenSuffix = version
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  const dstPath = join(formulaBaseDir, `sentrie@${tokenSuffix}.rb`);
+
+  const className = `SentrieAT${tokenSuffix}`;
+
+  // Replace class name
+  let text = src.replace(
+    /^class\s+Sentrie\s+<\s+Formula/m,
+    `class ${className} < Formula`
+  );
+
+  // Also rename the formula name if your template includes "class Sentrie" only.
+  // Homebrew uses filename for formula name; class rename is the key piece.
+  if (text === src) {
+    console.error(`failed to rewrite formula class for sentrie@${tokenSuffix}`);
+    process.exit(1);
+  }
+
+  // Remove comment lines
+  text = removeCommentLines(text);
+
+  writeFileSync(dstPath, text, "utf8");
+}
+
+function formulaClassSuffix(tokenSuffix) {
+  // tokenSuffix is like "1_2_4" or "1" etc.
+  const digits = tokenSuffix.replace(/[^0-9]/g, "");
+  return digits.length ? digits : "0";
 }
