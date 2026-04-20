@@ -1,5 +1,5 @@
 
-class Sentrie < Formula
+class SentrieAT0_0_3 < Formula
   desc "Sentrie policy engine"
   homepage "https://sentrie.sh"
   version "0.0.3"
