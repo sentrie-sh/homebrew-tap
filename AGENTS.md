@@ -1,0 +1,1 @@
+Scope commits to this repository only. Prefer small(ish), focused commits; one logical change per commit when practical; combine only when inseparable (same fix, feature slice, or mechanical rename). For full commit rules (including message style), follow **Code commits** and **Commit messages** in the main Sentrie repository `AGENTS.md` (see `sentrie-sh/sentrie`).
