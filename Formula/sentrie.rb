@@ -2,21 +2,21 @@
 class Sentrie < Formula
   desc "Sentrie policy engine"
   homepage "https://sentrie.sh"
-  version "0.0.3"
+  version "0.0.4"
   license "Apache-2.0"
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/sentrie-sh/sentrie/releases/download/v0.0.3/sentrie_0.0.3_darwin_amd64.tar.gz"
-      sha256 "b63d58bdca986df92bdab6f413df15afe5dfb76504fe52a2c565d245c2179d25"
+      url "https://github.com/sentrie-sh/sentrie/releases/download/v0.0.4/sentrie_0.0.4_darwin_amd64.tar.gz"
+      sha256 "4050b7445d6d6361425717528c3235ec85a22548b79ef3e0432eb708415eb5ff"
 
       define_method(:install) do
         bin.install "sentrie"
       end
     end
     if Hardware::CPU.arm?
-      url "https://github.com/sentrie-sh/sentrie/releases/download/v0.0.3/sentrie_0.0.3_darwin_arm64.tar.gz"
-      sha256 "72f84b76b2a9a20ce19d6ec36e3e9de642134c31b162797a74703a7349242837"
+      url "https://github.com/sentrie-sh/sentrie/releases/download/v0.0.4/sentrie_0.0.4_darwin_arm64.tar.gz"
+      sha256 "bc61b5f604fd6f90cf1923dea1e86d8827d37f081694e3795e081d511be498dd"
 
       define_method(:install) do
         bin.install "sentrie"
@@ -26,15 +26,15 @@ class Sentrie < Formula
 
   on_linux do
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
-      url "https://github.com/sentrie-sh/sentrie/releases/download/v0.0.3/sentrie_0.0.3_linux_amd64.tar.gz"
-      sha256 "cc4b1e0de470662a21ff780e5e7e151d92b8349a4be24667d9dcf8614e43fb5c"
+      url "https://github.com/sentrie-sh/sentrie/releases/download/v0.0.4/sentrie_0.0.4_linux_amd64.tar.gz"
+      sha256 "2526d105bec3d6a23b0c92e3ce51c89469759cc1093b43c8453aca43cb74a22d"
       define_method(:install) do
         bin.install "sentrie"
       end
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/sentrie-sh/sentrie/releases/download/v0.0.3/sentrie_0.0.3_linux_arm64.tar.gz"
-      sha256 "21d493d2d47dc9cba03fc59f2daa92ebe3397c08746efefbd8f2705825d46cd1"
+      url "https://github.com/sentrie-sh/sentrie/releases/download/v0.0.4/sentrie_0.0.4_linux_arm64.tar.gz"
+      sha256 "1a9bf0a520a0a5be645d4dda6025e037bbd0648b2699c0d274b5bd034385193d"
       define_method(:install) do
         bin.install "sentrie"
       end
